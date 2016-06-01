@@ -8,8 +8,6 @@ import requests
 import sys
 import re
 import json
-import iso8601
-import httplib2
 
 with open('vigicrue-stations.geojson') as json_file:
   data = json.load(json_file)
