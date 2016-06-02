@@ -8,7 +8,6 @@ import requests
 import sys
 import re
 import json
-import iso8601
 
 with open('vigicrue-stations.geojson') as json_file:
   data = json.load(json_file)
@@ -36,5 +35,3 @@ with open('vigicrue-stations.geojson') as json_file:
             r = requests.post('http://localhost:8000/event', data = geojson)
             if r.status_code != 201:
               break
-
-

@@ -1,7 +1,6 @@
 {
 "type": "FeatureCollection",
 "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-                                                                                
 "features": [
 { "type": "Feature", "properties": { "id": "A021005050", "X": 1046200, "Y": 6727500 }, "geometry": { "type": "Point", "coordinates": [ 7.606153, 47.55697 ] } },
 { "type": "Feature", "properties": { "id": "A060005050", "X": 1054300, "Y": 6840000 }, "geometry": { "type": "Point", "coordinates": [ 7.804631, 48.56318 ] } },
