@@ -25,9 +25,6 @@ for s in `cat stations.txt`; do
 done
 
 # récupération mesures en HTML (site public)
-http://www.vigicrues.gouv.fr/niveau3.php?CdStationHydro=F439000101&typegraphe=h&AffProfondeur=168&nbrstations=5&ong=2&Submit=Refaire+le+tableau+-+Valider+la+s%C3%A9lection
-http://www.vigicrues.gouv.fr/niveau3.php?CdStationHydro=F439000101&typegraphe=q&AffProfondeur=168&nbrstations=5&ong=2&Submit=Refaire+le+tableau+-+Valider+la+s%C3%A9lection
-
 mkdir -p mesures
 for s in `cat stations.txt`; do
   curl -s "http://www.vigicrues.gouv.fr/hackathon2016/observations.xml/?CdStationHydro=$s" > mesures/$s.xml
@@ -40,4 +37,16 @@ for s in `cat stations.txt`; do
   curl -s "http://www.vigicrues.gouv.fr/hackathon2016/observations.xml/?CdStationHydro=$s" > mesures/$s.xml
 done
 
+# download troncons vigicrues (source SANDRE)
+wget -nc http://services.sandre.eaufrance.fr/telechargement/geo/VIC/EntVigiCru/FXX/EntVigiCru_FXX-shp.zip
+unzip EntVigiCru_FXX-shp.zip
+# import postgis
+ogr2ogr -f "PostgreSQL" PG:"dbname=oedb" -t_srs EPSG:4326 -nlt GEOMETRY -nln vigicrues-troncons EntVigiCru_FXX-shp/EntVigiCru.shp
+rm -rf EntVigiCru_FXX*
+# mak index
+psql oedb -c "
+alter table vigicrues_troncons drop column ogc_fid;
+update vigicrues_troncons set wkb_geometry = st_snaptogrid(wkb_geometry,0.000001);
+create index vigicrues_troncons_idx_id on vigicrues_troncons (cdentvigic);
+"
 
