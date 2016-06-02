@@ -9,12 +9,11 @@ import sys
 import re
 import json
 import iso8601
-import httplib2
 
 with open('vigicrue-stations.geojson') as json_file:
   data = json.load(json_file)
   for s in data['features']:
-    url = 'http://www.vigicrues.gouv.fr/niveau3.php?AffProfondeur=168&nbrstations=5&ong=2&CdStationHydro='+s['properties']['id']
+    url = 'http://www.vigicrues.gouv.fr/niveau3.php?AffProfondeur=24&nbrstations=5&ong=2&CdStationHydro='+s['properties']['id']
     # données des hauteurs d'eau
     hauteurs=requests.get(url+'&typegraphe=h').content.decode('utf-8')
     mesure_html = BeautifulSoup(hauteurs,'lxml')
@@ -22,7 +21,7 @@ with open('vigicrue-stations.geojson') as json_file:
     if mesure_h is not None:
       mesure_h = mesure_h.find_all("tr")
       nom_station=mesure_html.find("title").string[12:]
-      print(nom_station)
+      # print(s['properties']['id'])
       for m in mesure_h:
         mesure = m.find_all("td")
         if len(mesure)>0:
@@ -34,5 +33,8 @@ with open('vigicrue-stations.geojson') as json_file:
 
             geojson = json.dumps(dict(type='Feature',properties=dict(source='http://www.vigicrues.gouv.fr/niveau3.php?CdStationHydro='+s['properties']['id'], type='observed', what='water.level', when=when, hauteur=mesure[1].string, id_station=s['properties']['id'], label=nom_station+" : "+mesure[1].string+"m"), geometry=s['geometry']))
             # envoi à l'API OpenEventDatabase
-            r = requests.post('http://api.openeventdatabase.org/event', data = geojson)
+            r = requests.post('http://localhost:8000/event', data = geojson)
+            if r.status_code != 201:
+              break
+
 
