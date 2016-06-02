@@ -23,11 +23,11 @@ for item in r.find_all('item'):
   g = cur.fetchone()
   if g is not None:
       niveau = ''
-      if label.find(' : Rouge'):
+      if label[-5:] == 'Rouge':
         niveau = 'danger'
-      elif label.find(' : Orange'):
+      if label[-6:] == 'Orange':
         niveau = 'alert'
-      elif label.find(' : Jaune'):
+      if label[-5:] == 'Jaune':
         niveau = 'warning'
 
       if niveau!='':
@@ -37,5 +37,5 @@ for item in r.find_all('item'):
         date_start = datetime.datetime(*start[:7]).isoformat()
         p = dict(type="unplanned", what="flood."+niveau, source="http://www.vigicrues.gouv.fr/rss/", when=str(date_start)+tz, alert_level=niveau, label=label)
         geojson = json.dumps(dict(geometry=json.loads(g[0]), properties=p, type='Feature'))
-        r = requests.post('http://localhost:8000/event', data = geojson)
+        #r = requests.post('http://localhost:8000/event', data = geojson)
 
