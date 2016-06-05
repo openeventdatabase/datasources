@@ -11,7 +11,6 @@ import json
 import psycopg2
 import datetime
 from   datetime import timedelta
-import sqlite3
 
 api = 'http://api.openeventdatabase.org'
 
@@ -23,11 +22,6 @@ niveau = ['très bas','bas','moyen','élevé','très élevé']
 # connexion base postgis pour géométries des départements
 db = psycopg2.connect("dbname=oedb")
 cur = db.cursor()
-
-# base sqlite pour suivre l'évolution des événements d'un run au suivant
-sql = sqlite3.connect('airparif.db')
-db = sql.cursor()
-db.execute('CREATE TABLE IF NOT EXISTS airparif_events (id text, what text, start text, geom text, label text, stop text)')
 
 for dep in departements:
   # download HTML page
