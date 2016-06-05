@@ -61,6 +61,8 @@ with open(sys.argv[1]) as json_file:
         e_what = 'traffic.obstacle'
       if e['Preview'][:10]=='BROUILLARD':
         e_what = 'weather.warning.fog'
+      if e['Preview'][:7]=='BOUCHON':
+        e_what = 'traffic.jam';
 
       label = e['Metadatas']['AUTOROUTE']
       if e['Metadatas']['DIRECTION'] != '':
