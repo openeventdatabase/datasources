@@ -52,7 +52,7 @@ def decode_polyline(polyline_str):
 api ='http://api.openeventdatabase.org'
 
 # base sqlite pour suivre l'évolution des événements d'un run au suivant
-sql = sqlite3.connect('vinci.db')
+sql = sqlite3.connect(sys.argv[1][8:-22]+'.db')
 db = sql.cursor()
 db.execute('CREATE TABLE IF NOT EXISTS evt (id text, what text, start text, geom text, label text, stop text)')
 
