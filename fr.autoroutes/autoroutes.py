@@ -59,7 +59,11 @@ db.execute('CREATE TABLE IF NOT EXISTS evt (id text, what text, start text, geom
 if len(sys.argv)<=2:
   # récupération de la date dans le nom du fichier
   e_when=sys.argv[1][-21:]
-  e_when=e_when[:16]+':00+01:00'
+  e_when=e_when[:16]
+  if e_when < '2016-03-25T03:00':
+    e_when = e_when+':00+01:00'
+  else:
+    e_when = e_when+':00+02:00'
 else:
   e_when=sys.argv[2]
 
@@ -109,7 +113,7 @@ with open(sys.argv[1]) as json_file:
         label = label +' vers '+e['Metadatas']['DIRECTION']
       label = label + ': ' + e['Preview']
 
-      e_type = "unplanned"
+      e_type = "unscheduled"
       e_source = "http://www.vinci-autoroutes.com/"
 
       # décodage polyline pour récupérer la bonne extrémité
@@ -118,13 +122,13 @@ with open(sys.argv[1]) as json_file:
       geometry = dict(type = 'Point', coordinates = [lon,lat])
 
       # a-t-on un évènement en cours ?
-      db.execute('SELECT * FROM evt WHERE start <= ? AND what = ? AND geom = ? AND label = ?',(e_when, e_what, json.dumps(geometry,sort_keys=True), label))
+      db.execute('SELECT id,start,stop FROM evt WHERE start <= ? AND what = ? AND geom = ? AND label = ?',(e_when, e_what, json.dumps(geometry,sort_keys=True), label))
       last = db.fetchone()
       if last is not None:
-        # on a déjà un événement similaire en cours... on le prolonge
-        geojson=json.dumps(dict(properties=dict(type = e_type, what = e_what, start = last[2], stop = e_when, source=e_source, label = label), geometry = geometry))
-        if e_when > last[2]:
-          #print("PUT: "+last[0]+" "+last[2] +">"+e_when)
+        if e_when > last[1] and e_when > last[2]:
+          # on a déjà un événement similaire en cours... on le prolonge
+          geojson=json.dumps(dict(properties=dict(type = e_type, what = e_what, start = last[1], stop = e_when, source=e_source, label = label), geometry = geometry))
+          #print("PUT: "+last[0]+" "+last[1] +">"+e_when)
           r = requests.put(api+'/event/'+last[0], data = geojson)
           db.execute("UPDATE evt SET stop = ? WHERE id = ?", (e_when, last[0]))
       else:
@@ -132,7 +136,8 @@ with open(sys.argv[1]) as json_file:
         r = requests.post(api+'/event', data = geojson)
         if r.status_code == 201:
           event = json.loads(r.text)
-          print(e_when+" POST:"+event['id'])
+          #print("POST:"+event['id'])
+          #print(geojson)
           db.execute("INSERT INTO evt VALUES ( ? , ? , ? , ? , ? , ? )", (event['id'], e_what, e_when, json.dumps(geometry,sort_keys=True), label, e_when))
 
 # on supprime les événements qui n'ont plus court
