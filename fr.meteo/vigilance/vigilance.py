@@ -10,6 +10,8 @@ import re
 import json
 import iso8601
 import psycopg2
+import httplib2
+import zlib
 
 x = BeautifulSoup(open(sys.argv[1]),'lxml')
 
@@ -61,11 +63,14 @@ for d in x.find_all('dv'):
       label = "Vigilance absolue, danger: "+label
 
     if dep == "75" :
-      cur.execute("""SELECT ST_asgeojson(st_snaptogrid(st_union(wkb_geometry),0.000001)) FROM departements WHERE insee in ('75','92','93','94');""")
+      cur.execute("""SELECT ST_asgeojson(st_snaptogrid(st_union(wkb_geometry),0.000001)) as geom, 'Paris petite couronne' as nom FROM departements WHERE insee in ('75','92','93','94');""")
     else:
-      cur.execute("""SELECT ST_asgeojson(st_snaptogrid(wkb_geometry,0.000001)) FROM departements WHERE insee=%s;""", (dep, ))
+      cur.execute("""SELECT ST_asgeojson(st_snaptogrid(wkb_geometry,0.000001)) as geom, nom FROM departements WHERE insee=%s;""", (dep, ))
     g = cur.fetchone()
+
     if g is not None:
+      label = g[1]+', '+label
       p = dict(type="forecast", what="weather."+niveau+"."+risque, source="http://vigilance.meteo.fr", start=str(date_start), where_INSEE=dep, stop=str(date_end), alert_level=niveau, label=label)
       geojson = json.dumps(dict(geometry=json.loads(g[0]), properties=p, type='Feature'))
-      r = requests.post('http://api.openeventdatabase.org/event', data = geojson)
+
+      r = requests.post('http://localhost:8000/event', data = geojson)

@@ -91,9 +91,11 @@ with open(sys.argv[1]) as json_file:
         e_what = 'weather.warning.snow';
       if e['Preview'][:8]=='OBSTACLE':
         e_what = 'traffic.obstacle'
+      if e['Preview'][:5]=='ORAGE':
+        e_what = 'weather.warning.thunderstorm'
       if e['Preview'][:6]=='PAS DE':
         e_what = 'traffic.nogaz'
-      if e['Preview'][:6]=='PIETON':
+      if e['Preview'][:6]=='PIETON' or e['Preview'][:6]=='PIÉTON':
         e_what = 'traffic.obstacle.pedestrian'
       if e['Preview'][:19]=='PLUIES VERGLACANTES':
         e_what = 'weather.warning.hail';
