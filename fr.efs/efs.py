@@ -29,12 +29,15 @@ for n in range(0, nb-1):
 
     e_start = None
     if e['c_hdebutaprem'] is not None:
+      # heure fournie dans le json, on l'utilise...
       e_start = time.strftime('%Y-%m-%dT'+e['c_hdebutaprem']+'CET', time.localtime(e['c_date']))
     elif e['text'] is not None:
+      # extraction heure depuis le texte de description
       match = re.search('de (.....) à (.....)',e['text'])
       if match:
         e_start = time.strftime('%Y-%m-%dT'+match.group(1).replace('h',':')+':00CET', time.localtime(e['c_date']))
     if e_start is None:
+      # heure par défaut (midi)
       e_start = time.strftime('%Y-%m-%dT12:00:00CET', time.localtime(e['c_date']))
 
     e_stop = None
@@ -57,11 +60,10 @@ for n in range(0, nb-1):
 
     geojson = json.dumps(dict(type='Feature', geometry=e_geom, properties=properties),sort_keys=True)
 
-    md5 = hashlib.md5(str(geojson).encode()).hexdigest()
-    db.execute('SELECT oedb_id, hash FROM evt WHERE id = ?',(e['c_id'],))
-    last = db.fetchone()
+    last =  db.execute('SELECT oedb_id, hash FROM evt WHERE id = ?',(e['c_id'],)).fetchone()
     # do we have an existing event ?
     if last is not None:
+      md5 = hashlib.md5(str(geojson).encode()).hexdigest()
       # update if event has changed (different hash)
       if last[1] != md5:
         print("PUT: "+last[0])
