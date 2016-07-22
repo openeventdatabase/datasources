@@ -9,7 +9,6 @@ api = 'http://api.openeventdatabase.org'
 
 def extractAndPush(nelat, nelon, swlat, swlon):
   url = 'https://carte.dondusang.com/gmap_regionchanged.php?nelat=%s&nelon=%s&swlat=%s&swlon=%s&marker=2&fb=0&t1=0&t2=4' % (nelat, nelon, swlat, swlon)
-  print(url)
   r = requests.get(url)
   events = json.loads(r.text)
   nb = events['num_results']
@@ -67,14 +66,14 @@ def extractAndPush(nelat, nelon, swlat, swlon):
         if last is not None:
           # update if event has changed (different hash)
           if last[1] != md5:
-            print("PUT: "+last[0])
+            #print("PUT: "+last[0])
             r = requests.put(api+'/event/'+last[0], data = geojson)
             db.execute("UPDATE evt SET hash = ? WHERE oedb_id = ?", (md5, last[0]))
         else:
           r = requests.post(api+'/event', data = geojson)
           if r.status_code == 201:
             oedb = json.loads(r.text)
-            print("POST:"+oedb['id'])
+            #print("POST:"+oedb['id'])
             db.execute("INSERT INTO evt VALUES ( ? , ? , ? )", (oedb['id'], e['c_id'], md5))
 
 
