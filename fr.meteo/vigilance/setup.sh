@@ -17,3 +17,4 @@ create index departements_insee on departements (insee);
 alter table departements drop ogc_fid;
 alter table departements drop surf_ha;
 "
+rm departements-*
