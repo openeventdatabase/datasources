@@ -25,6 +25,7 @@ db.execute('CREATE TABLE IF NOT EXISTS evt (id text, what text, start text, geom
 
 rss = requests.get('http://www.vigicrues.gouv.fr/rss/').content
 r = BeautifulSoup(rss,'lxml')
+e_when = None
 
 for item in r.find_all('item'):
   label = item.find('title').string
@@ -51,7 +52,7 @@ for item in r.find_all('item'):
         e_what = "flood."+niveau
         geometry = json.loads(g[0])
         e_source = "http://www.vigicrues.gouv.fr/rss/"
- 
+
         # a-t-on un évènement en cours ?
         db.execute('SELECT * FROM evt WHERE start <= ? AND what = ? AND geom = ? AND label = ?',(e_when, e_what, json.dumps(geometry,sort_keys=True), label))
         last = db.fetchone()
@@ -73,7 +74,7 @@ for item in r.find_all('item'):
 # on supprime les événements qui n'ont plus court
 if e_when is not None:
   db.execute("DELETE FROM evt WHERE stop < ?", (e_when,))
+  db.execute("VACUUM")
 
 sql.commit()
 db.close()
-

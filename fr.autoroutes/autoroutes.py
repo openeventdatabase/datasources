@@ -145,6 +145,7 @@ with open(sys.argv[1]) as json_file:
 # on supprime les événements qui n'ont plus court
 if e_when is not None:
   db.execute("DELETE FROM evt WHERE stop < ?", (e_when,))
+  db.execute("VACUUM")
 
 sql.commit()
 db.close()

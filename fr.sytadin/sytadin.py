@@ -84,6 +84,7 @@ with open(sys.argv[1]) as json_file:
 
     # on supprime les événements qui n'ont plus court
     db.execute("DELETE FROM sytadin_events WHERE stop < ?", (e_when,))
+    db.execute("VACUUM")
 
     sql.commit()
   except:
