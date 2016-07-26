@@ -43,7 +43,7 @@ unzip EntVigiCru_FXX-shp.zip
 # import postgis
 ogr2ogr -f "PostgreSQL" PG:"dbname=oedb" -t_srs EPSG:4326 -nlt GEOMETRY -nln vigicrues-troncons EntVigiCru_FXX-shp/EntVigiCru.shp
 rm -rf EntVigiCru_FXX*
-# mak index
+# make index
 psql oedb -c "
 alter table vigicrues_troncons drop column ogc_fid;
 update vigicrues_troncons set wkb_geometry = st_snaptogrid(wkb_geometry,0.000001);
