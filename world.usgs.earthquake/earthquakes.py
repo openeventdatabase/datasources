@@ -34,38 +34,31 @@ for e in jsonResp['features']:
         minutes=e['properties']['tz'])
 
     e_when = dt_earthquake.strftime('%Y-%m-%dT%H:%M:%S.%f')
-    e_magnitude = e['properties']['mag']
-    e_magnitude_type = e['properties']['magType']
 
     # other Key/Vals
     e_id = e['id']
     e_type = 'observed'
-    e_what = 'nature.' + e['properties']['type']
+    e_what = 'nature.' + e['properties']['type']+'.'+str(e['properties']['mag'])[0]
     e_source = 'http://earthquake.usgs.gov'
     e_label = e['properties']['title']
-    e_where_place = e['properties']['place']
-    e_status = e['properties']['status']
 
-    e_lon = e['geometry']['coordinates'][0]
-    e_lat = e['geometry']['coordinates'][1]
-    e_depth = e['geometry']['coordinates'][2]
-
-    geometry = dict(type='Point', coordinates=[round(e_lon, 6), round(e_lat, 6)])
+    geometry = dict(type='Point', coordinates=[round(e['geometry']['coordinates'][0], 6), round(e['geometry']['coordinates'][1], 6)])
 
     # chercher dans la base si présent
     db.execute('SELECT id FROM earthquake where id = ?', (e_id,))
     rec = db.fetchone()
 
     if rec is None:
-        try :
             properties = dict(type=e_type, what=e_what, when=e_when, source=e_source)
 
-            properties['where:place'] = e_where_place
-            properties['source'] = e_source
-            properties['name'] = "%s - %s" % (e_magnitude, e_start)
-            properties['status'] = e_status
-            properties['magnitude'] = e_magnitude
-            properties['magnitude_type'] = e_magnitude_type
+            properties['where:place'] = e['properties']['place']
+            properties['name'] = "%s @ %s, %s" % (e['properties']['mag'], e_when[0:19].replace('T',' '), e['properties']['place'])
+            properties['status'] = e['properties']['status']
+            properties['magnitude'] = e['properties']['mag']
+            properties['magnitude_type'] = e['properties']['magType']
+            properties['url'] = e['properties']['url']
+            properties['depth:km'] = e['geometry']['coordinates'][2]
+            properties['tsunami'] = e['properties']['tsunami']
 
             # Constituer le geoJson
             geojson = json.dumps(dict(type='Feature', properties=properties, geometry=geometry), sort_keys=True)
@@ -75,17 +68,10 @@ for e in jsonResp['features']:
 
             # Ajouter dans la BDD
             db.execute("INSERT INTO earthquake VALUES ( ? , ? , ? , ? , ? , ?, ? )", (
-                e_id, e_what, e_when, json.dumps(geometry, sort_keys=True), e_label, e_when, e_magnitude)
+                e_id, e_what, e_when, json.dumps(geometry, sort_keys=True), e_label, e_when, e['properties']['mag'])
             )
             sql.commit()
 
-        except:
-            print("Unexpected error:", sys.exc_info()[0])
 
 db.execute("VACUUM")
 db.close()
-
-
-
-
-
