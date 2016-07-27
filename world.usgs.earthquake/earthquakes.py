@@ -1,6 +1,3 @@
-#!/usr/bin/python2.7
-#-*- coding: utf-8 -*-
-
 import requests
 import json
 import psycopg2
@@ -17,21 +14,14 @@ sql = sqlite3.connect("earthquake.usgs.gov.db")
 db = sql.cursor()
 db.execute('CREATE TABLE IF NOT EXISTS earthquake (id text UNIQUE, what text, start text, geom text, label text, stop text, magnitude text)')
 
-
 # Récupérer earthquake > 2.5 magnitude
 # --> https://fr.wikipedia.org/wiki/Magnitude_d%27un_s%C3%A9isme
 
 url = 'http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson'
-# url = 'http://localhost:8000/2016-07-25_2.5_day.geojson'
-# url = 'http://localhost:8000/2016-07-27_07h41_2.5_day.geojson'
 
 resp = requests.get(url=url)
 
 jsonResp = json.loads(resp.text)
-
-# print time.gmtime(1469507540390)
-# print datetime.datetime.fromtimestamp(1469507540390/1000).strftime('%Y-%m-%dT%H:%M:%S.%f')
-# print jsonResp
 
 for e in jsonResp['features']:
 
@@ -43,10 +33,7 @@ for e in jsonResp['features']:
     dt_earthquake = datetime.datetime.fromtimestamp(e['properties']['time'] / 1000) + datetime.timedelta(
         minutes=e['properties']['tz'])
 
-    # when, start, stop --> same datetime
     e_when = dt_earthquake.strftime('%Y-%m-%dT%H:%M:%S.%f')
-    e_start = dt_earthquake.strftime('%Y-%m-%dT%H:%M:%S.%f')
-    e_stop = dt_earthquake.strftime('%Y-%m-%dT%H:%M:%S.%f')
     e_magnitude = e['properties']['mag']
     e_magnitude_type = e['properties']['magType']
 
@@ -69,14 +56,9 @@ for e in jsonResp['features']:
     db.execute('SELECT id FROM earthquake where id = ?', (e_id,))
     rec = db.fetchone()
 
-    if rec is not None:
-
-        # Deja enregistre
-        print('Enregistrement present --> id=%s|label=%s' % (e_id, e_id))
-    else:
+    if rec is None:
         try :
             properties = dict(type=e_type, what=e_what, when=e_when, source=e_source)
-            print properties
 
             properties['where:place'] = e_where_place
             properties['source'] = e_source
@@ -87,21 +69,16 @@ for e in jsonResp['features']:
 
             # Constituer le geoJson
             geojson = json.dumps(dict(type='Feature', properties=properties, geometry=geometry), sort_keys=True)
-            # geojson = json.dumps(properties,geometry=geometry)
-
-            print('Publish in OEDB --')
 
             # Pousser dans OEDB --
-            # r = requests.post(api + '/event', data=geojson)
+            r = requests.post(api + '/event', data=geojson)
 
             # Ajouter dans la BDD
             db.execute("INSERT INTO earthquake VALUES ( ? , ? , ? , ? , ? , ?, ? )", (
                 e_id, e_what, e_when, json.dumps(geometry, sort_keys=True), e_label, e_when, e_magnitude)
             )
-
             sql.commit()
 
-            print('Ajoute --> id=%s|label=%s' % (e_id, e_label))
         except:
             print("Unexpected error:", sys.exc_info()[0])
 
