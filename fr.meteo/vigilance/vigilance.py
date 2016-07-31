@@ -91,7 +91,7 @@ for d in x.find_all('dv'):
     if last is not None:
       # on a déjà un événement similaire en cours... on le prolonge
       geojson=json.dumps(dict(type='Feature', properties=dict(type = e_type, what = e_what, start = last[1], stop = e_stop, source=e_source, label = e_text), geometry = e_geom))
-      print("PUT: "+last[0]+" "+last[1] +">"+e_stop)
+      #print("PUT: "+last[0]+" "+last[1] +">"+e_stop)
       r = requests.put(api+'/event/'+last[0], data = geojson)
       db.execute("UPDATE evt SET stop = ? WHERE id = ?", (e_stop, last[0]))
     else:
@@ -99,8 +99,7 @@ for d in x.find_all('dv'):
       r = requests.post(api+'/event', data = geojson)
       if r.status_code == 201 :
         event = json.loads(r.text)
-        print("POST:"+event['id'])
-        #print(geojson)
+        #print("POST:"+event['id'])
         db.execute("INSERT INTO evt VALUES ( ? , ? , ? , ? , ? , ? )", (event['id'], e_what, e_start, json.dumps(e_geom,sort_keys=True), e_text, e_stop))
       if r.status_code == 409 :
         print(r.text)
