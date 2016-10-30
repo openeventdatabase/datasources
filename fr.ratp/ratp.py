@@ -36,7 +36,7 @@ with open(sys.argv[1]) as json_file:
       for ligne in events['status'][reseau]['lines']:
         e_what = None
         message = events['status'][reseau]['lines'][ligne]['message']
-                
+
         e_type = 'unscheduled'
         e_text = reseau+'-'+ligne+': '+message
 
@@ -142,14 +142,14 @@ with open(sys.argv[1]) as json_file:
               # on a déjà un événement similaire en cours... on le prolonge
               properties['start']=last[2]
               geojson = json.dumps(dict(properties=properties, geometry = geometry), sort_keys=True)
-              print("PUT: "+last[0]+" "+last[2] +">"+e_when+" "+message)
+              #print("PUT: "+last[0]+" "+last[2] +">"+e_when+" "+message)
               r = requests.put(api+'/event/'+last[0], data = geojson)
               db.execute("UPDATE events SET stop = ? WHERE id = ?", (e_when, last[0]))
             else:
               geojson = json.dumps(dict(properties=properties, geometry = geometry), sort_keys=True)
               r = requests.post(api+'/event', data = geojson)
               event = json.loads(r.text)
-              print("POST:"+event['id']+" "+message)
+              #print("POST:"+event['id']+" "+message)
               db.execute("INSERT INTO events VALUES ( ? , ? , ? , ? , ? , ? )",
                 (event['id'], e_what, e_when, json.dumps(geometry,sort_keys=True), e_text, e_when))
 
