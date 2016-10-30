@@ -116,14 +116,14 @@ for e in events['events']:
   if last is not None:
     # update if event has changed (different hash)
     if last[1] != md5:
-      print("PUT: "+last[0])
+      #print("PUT: "+last[0])
       r = requests.put(api+'/event/'+last[0], data = geojson)
       db.execute("UPDATE evt SET hash = ? WHERE oedb_id = ?", (md5, last[0]))
   else:
     r = requests.post(api+'/event', data = geojson)
-    if r.status_code == 201:    
+    if r.status_code == 201:
       oedb = json.loads(r.text)
-      print("POST:"+oedb['id'])
+      #print("POST:"+oedb['id'])
       db.execute("INSERT INTO evt VALUES ( ? , ? , ? )", (oedb['id'], e['id'], md5))
 
 sql.commit()
