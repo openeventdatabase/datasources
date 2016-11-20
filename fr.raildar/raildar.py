@@ -15,7 +15,7 @@ import requests
 api ='http://api.openeventdatabase.org'
 
 # base sqlite pour suivre l'évolution des événements d'un run au suivant
-sql = sqlite3.connect('raildar.db')
+sql = sqlite3.connect(sys.argv[2])
 db = sql.cursor()
 db.execute('''CREATE TABLE IF NOT EXISTS events (id text, what text,
   start text, geom text, label text, stop text)''')
@@ -24,12 +24,9 @@ pgdb = psycopg2.connect("dbname=oedb")
 pg = pgdb.cursor()
 pg.execute('CREATE TABLE IF NOT EXISTS raildar_geom (id_train bigint, geom geometry)')
 
-if len(sys.argv)<=2:
-  # récupération de la date dans le nom du fichier
-  e_when=sys.argv[1][-26:]
-  e_when=e_when[:21]
-else:
-  e_when=sys.argv[2]
+# récupération de la date dans le nom du fichier
+e_when=sys.argv[1][-26:]
+e_when=e_when[:21]
 
 with open(sys.argv[1]) as json_file:
     events = json.load(json_file)
@@ -39,7 +36,7 @@ with open(sys.argv[1]) as json_file:
         e_what = 'public_transport.delay'
         e_text = message = "%s %s (vers %s) retard de %s mn" % (evp['brand'],evp['id_mission'],evp['terminus'],evp['retard'])
         e_type = 'unscheduled'
-        if evp['retard'] > 30:
+        if evp['retard'] >= 30:
             e_what = 'public_transport.delay.major'
         if evp['retard'] < 0:
             e_what = 'public_transport.cancelled'
@@ -69,28 +66,37 @@ with open(sys.argv[1]) as json_file:
                 pg.execute('SELECT ST_asgeojson(geom) FROM raildar_geom WHERE id_train = %s',(evp['id_train'],))
                 train = pg.fetchone()
 
-        geometry = json.loads(train[0])
-        # a-t-on un évènement en cours ?
-        db.execute('SELECT * FROM events WHERE start <= ? AND what = ? AND geom = ? AND label = ?',(e_when, e_what, train[0], e_text))
-        last = db.fetchone()
-        if last is not None:
-          # on a déjà un événement similaire en cours... on le prolonge
-          properties['start']=last[2]
-          geojson = json.dumps(dict(properties=properties, geometry = geometry), sort_keys=True)
-          print("PUT: "+last[0]+" "+last[2] +">"+e_when+" "+message)
-          r = requests.put(api+'/event/'+last[0], data = geojson)
-          db.execute("UPDATE events SET stop = ? WHERE id = ?", (e_when, last[0]))
-        else:
-          geojson = json.dumps(dict(properties=properties, geometry = geometry), sort_keys=True)
-          #print(geojson)
-          r = requests.post(api+'/event', data = geojson)
-          event = json.loads(r.text)
-          print("POST:"+event['id']+" "+message)
-          if 'id' in event :
-            db.execute("INSERT INTO events VALUES ( ? , ? , ? , ? , ? , ? )",
-              (event['id'], e_what, e_when, json.dumps(geometry,sort_keys=True), e_text, e_when))
+        try:
+            geometry = json.loads(train[0])
+            # a-t-on un évènement en cours ?
+            db.execute('SELECT * FROM events WHERE start <= ? AND what = ? AND geom = ? AND label = ?',(e_when, e_what, train[0], e_text))
+            last = db.fetchone()
+            if last is not None:
+              # on a déjà un événement similaire en cours... on le prolonge
+              properties['start']=last[2]
+              geojson = json.dumps(dict(properties=properties, geometry = geometry), sort_keys=True)
+              #print("PUT: "+last[0]+" "+last[2] +">"+e_when+" "+message)
+              r = requests.put(api+'/event/'+last[0], data = geojson)
+              db.execute("UPDATE events SET stop = ? WHERE id = ?", (e_when, last[0]))
+            else:
+              geojson = json.dumps(dict(properties=properties, geometry = geometry), sort_keys=True)
+              #print(geojson)
+              r = requests.post(api+'/event', data = geojson)
+              try:
+                  event = json.loads(r.text)
+                  #print("POST:"+event['id']+" "+message)
+                  if 'id' in event :
+                    db.execute("INSERT INTO events VALUES ( ? , ? , ? , ? , ? , ? )",
+                      (event['id'], e_what, e_when, train[0], e_text, e_when))
+              except:
+                  print(r.text)
+                  pass
+        except:
+            pass
 
 # on supprime les événements qui n'ont plus court
+#for row in db.execute("SELECT id,what,start,stop,label FROM events WHERE stop < ?", (e_when,)):
+#    print(row)
 db.execute("DELETE FROM events WHERE stop < ?", (e_when,))
 db.execute("VACUUM")
 sql.commit()
