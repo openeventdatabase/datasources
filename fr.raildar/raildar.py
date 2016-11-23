@@ -9,7 +9,6 @@ import json
 import re
 import sqlite3
 import psycopg2
-import requests
 
 # adresse de l'API
 api ='http://api.openeventdatabase.org'
