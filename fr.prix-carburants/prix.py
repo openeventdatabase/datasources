@@ -23,7 +23,8 @@ xml = open(sys.argv[1],encoding="iso8859-1")
 if len(sys.argv)>2:
     stop = sys.argv[2] # timestamp de fin pour ce prix
 else:
-    stop = (datetime.datetime.now()+datetime.timedelta(days=15)).isoformat()
+    # par défaut prix valable 4 semaines
+    stop = (datetime.datetime.now()+datetime.timedelta(days=28)).isoformat()
 
 print('stop=',stop)
 
