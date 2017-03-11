@@ -56,9 +56,13 @@ for pdv in prix.find_all(name='pdv'):
         s['services'].append(service.string)
 
     for carburant in pdv.find_all('prix'):
+        if carburant['valeur'].find('.')>=0:
+            prix = float(carburant['valeur'])
+        else:
+            prix = float(carburant['valeur'])/1000
         s['carburants'].append(dict(carburant=carburant['nom'],
             carburant_id=carburant['id'],
-            prix=float(carburant['valeur'])/1000,
+            prix=prix,
             maj=carburant['maj']))
         s['label'] = s['label'] + carburant['nom']+': '+str(float(carburant['valeur'])/1000)+'€, '
         if carburant['maj']>maj:
