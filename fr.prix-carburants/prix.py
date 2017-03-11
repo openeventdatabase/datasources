@@ -89,7 +89,7 @@ for pdv in prix.find_all(name='pdv'):
             if last is None or last != maj:
                 # on crée le nouvel événement
                 if prev is not None:
-                    s['prev_event'] = 'http://api.openventdatabase.org/event/'+prev
+                    s['prev_event'] = 'http://api.openeventdatabase.org/event/'+prev
                 r = requests.post(api+'/event', data = json.dumps(dict(type='Feature', properties=s, geometry=g),sort_keys=True))
                 # on récupère l'id
                 event = json.loads(r.text)
