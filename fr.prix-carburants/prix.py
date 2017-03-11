@@ -64,6 +64,7 @@ for pdv in prix.find_all(name='pdv'):
         if carburant['maj']>maj:
             maj = carburant['maj']
     s['label'] = s['label'][:-2]
+    maj = maj.replace('T',' ')
 
     station = conn.execute('SELECT * FROM stations where id=?', (pdv['id'],)).fetchone()
     if station is not None:
