@@ -45,6 +45,13 @@ for pdv in prix.find_all(name='pdv'):
         label=''
     )
 
+    if s['ouverture_debut']==s['ouverture_fin']:
+        s['ouverture:fr'] = '24/7'
+    else:
+        s['ouverture:fr'] = (s['ouverture_debut']+'-'+s['ouverture_fin']).replace(':','h')
+        if s['ouverture_sauf'] != '':
+            s['ouverture:fr'] = s['ouverture:fr'] + ' sauf '+ abs['ouverture_sauf']
+
     for service in pdv.find_all('service'):
         s['services'].append(service.string)
 
