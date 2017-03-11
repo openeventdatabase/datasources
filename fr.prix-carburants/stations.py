@@ -4,6 +4,7 @@
 # dernière version disponible sur https://github.com/openeventdatabase/datasources
 
 # récupération des nom/marque des stations services et sortie en stream json
+# à appeler par exemple avec: python stations.py > stations.json
 
 from bs4 import BeautifulSoup
 import requests
