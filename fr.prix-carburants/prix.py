@@ -12,7 +12,7 @@ import json
 import sqlite3
 import datetime
 
-api = 'http://api.openeventdatabase.org/'
+api = 'http://localhost:8000/'
 
 # base sqlite pour infos stations (nom/marque)
 conn = sqlite3.connect('stations.db')
@@ -73,6 +73,7 @@ for pdv in prix.find_all(name='pdv'):
         g = dict(type='Point',coordinates=[float(pdv['longitude'])/100000,float(pdv['latitude'])/100000])
         if len(s['carburants'])>0:
             last = None
+            prev = None
             try:
                 # on avait un événement en cours
                 e = conn.execute("SELECT * FROM  events WHERE id=?", (pdv['id'],)).fetchone()
@@ -81,11 +82,14 @@ for pdv in prix.find_all(name='pdv'):
                     r = requests.patch(api+'/event/'+e[1], json.dumps(dict(properties=dict(what='fuel.price.old', type='observed', start=e[2], stop=s['start']))))
                     print('PUT',e[1])
                 last = e[2]
+                prev = e[1]
             except:
                 pass
 
             if last is None or last != maj:
                 # on crée le nouvel événement
+                if prev is not None:
+                    s['prev_event'] = 'http://api.openventdatabase.org/event/'+prev
                 r = requests.post(api+'/event', data = json.dumps(dict(type='Feature', properties=s, geometry=g),sort_keys=True))
                 # on récupère l'id
                 event = json.loads(r.text)
