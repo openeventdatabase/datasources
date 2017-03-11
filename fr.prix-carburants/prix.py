@@ -64,7 +64,7 @@ for pdv in prix.find_all(name='pdv'):
             carburant_id=carburant['id'],
             prix=prix,
             maj=carburant['maj']))
-        s['label'] = s['label'] + carburant['nom']+': '+str(float(carburant['valeur'])/1000)+'€, '
+        s['label'] = s['label'] + carburant['nom']+': '+str(prix)+'€, '
         if carburant['maj']>maj:
             maj = carburant['maj']
     s['label'] = s['label'][:-2]
