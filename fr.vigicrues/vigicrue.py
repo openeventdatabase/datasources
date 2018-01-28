@@ -3,35 +3,29 @@
 # ce code est sous licence WTFPL
 # dernière version disponible sur https://github.com/openeventdatabase/datasources
 
-from bs4 import BeautifulSoup
 import requests
 import sys
 import re
 import json
+import time
 
 with open('vigicrue-stations.geojson') as json_file:
-  data = json.load(json_file)
-  for s in data['features']:
-    url = 'http://www.vigicrues.gouv.fr/niveau3.php?AffProfondeur=24&nbrstations=5&ong=2&CdStationHydro='+s['properties']['id']
-    # données des hauteurs d'eau
-    hauteurs=requests.get(url+'&typegraphe=h').content.decode('utf-8')
-    mesure_html = BeautifulSoup(hauteurs,'lxml')
-    mesure_h = mesure_html.find(class_="liste")
-    if mesure_h is not None:
-      mesure_h = mesure_h.find_all("tr")
-      nom_station=mesure_html.find("title").string[12:]
-      # print(s['properties']['id'])
-      for m in mesure_h:
-        mesure = m.find_all("td")
-        if len(mesure)>0:
-          when=mesure[0].string
-          # remise en forme de l'heure
-          when=when[6:10]+'-'+when[3:5]+'-'+when[0:2]+'T'+when[11:]+':00+02:00'
-          if when > '2016-06-01':
-            # préparation du geojson
-
-            geojson = json.dumps(dict(type='Feature',properties=dict(source='http://www.vigicrues.gouv.fr/niveau3.php?CdStationHydro='+s['properties']['id'], type='observed', what='water.level', when=when, hauteur=mesure[1].string, id_station=s['properties']['id'], label=nom_station+" : "+mesure[1].string+"m"), geometry=s['geometry']))
-            # envoi à l'API OpenEventDatabase
-            r = requests.post('http://localhost:8000/event', data = geojson)
-            if r.status_code != 201:
-              break
+    data = json.load(json_file)
+    for s in data['features']:
+        url = 'https://www.vigicrues.gouv.fr/services/observations.json/index.php?FormatDate=iso&CdStationHydro='+s['properties']['id']
+        # données des hauteurs d'eau
+        hauteurs=requests.get(url+'&typegraphe=h').content.decode('utf-8')
+        mesures = json.loads(hauteurs)
+        if 'Serie' in mesures:
+            nom_station = mesures['Serie']['LbStationHydro']
+            mm = mesures['Serie']['ObssHydro']
+            for i in range(1,len(mm)):
+                m = mm[len(mm)-i]
+                when = m['DtObsHydro']
+                print(when, m['ResObsHydro'])
+                geojson = json.dumps(dict(type='Feature',properties=dict(source='http://www.vigicrues.gouv.fr/', type='observed', what='water.level', when=when, hauteur=m['ResObsHydro'], id_station=s['properties']['id'], label=nom_station+" : "+str(m['ResObsHydro'])+"m"), geometry=s['geometry']))
+                # envoi à l'API OpenEventDatabase
+                print(geojson)
+                r = requests.post('http://localhost:8000/event', data = geojson)
+                if r.status_code != 201:
+                    break
