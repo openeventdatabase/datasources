@@ -116,19 +116,19 @@ function crawlCompetition($idCompetition)
         }, $competitionLocation);
         if (strpos($competitionLocation[1], '/') === false) {
             // Hors France
-            $apiGoogle = 'https://maps.googleapis.com/maps/api/geocode/json?address='.urlencode($matches[1]);
+            $apiGoogle = 'https://nominatim.openstreetmap.org/search?format=json&q='.urlencode($matches[1]);
             $data = file_get_contents($apiGoogle);
             $data = json_decode($data, true);
-            if (empty($data['results'])) {
+            if (empty($data)) {
 //                var_dump(__LINE__);
 //                var_dump($data);
 //                die();
                 return null;
             }
-            $data = reset($data['results']);
+            $data = reset($data);
             $arrayReturn['geometry']['coordinates'] = array(
-                $data['geometry']['location']['lng'],
-                $data['geometry']['location']['lat'],
+                $data['lon'],
+                $data['lat'],
             );
             $arrayReturn['properties']['where:name'] = $matches[1];
         } else {
