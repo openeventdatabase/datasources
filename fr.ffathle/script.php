@@ -1,6 +1,8 @@
 <?php
 
 define('API_URL', 'http://api.openeventdatabase.org');
+define('DB_FILE', 'oedb_fr_ffathle.sqlite');
+define('DEBUG', false);
 
 $fromDate = $argv[1]; // Format MySQL 2018-05-13
 $toDate = isset($argv[2]) ? $argv[2] : $argv[1];
@@ -49,8 +51,8 @@ function crawlCompetition($idCompetition)
             'type' => 'Point'
         ),
         'properties' => array(
-            'what' => 'sport.athletics',
-            'type' => 'forecast',
+            'what' => 'sport.athletics.competition',
+            'type' => 'scheduled',
             'start' => null, // ISO6801
             'stop' => null, // ISO6801
             'source' => $url,
@@ -71,7 +73,7 @@ function crawlCompetition($idCompetition)
     }
     $oDT = new \DateTime();
     $oDT->setDate($fromDate[2], $fromDate[1], $fromDate[0]);
-    $oDT->setTime(0,0,0,0);
+    $oDT->setTime(0,0,0);
     $arrayReturn['properties']['start'] = $oDT->format(DATE_ISO8601);
 
     // Date de fin
@@ -84,7 +86,7 @@ function crawlCompetition($idCompetition)
     }
     $oDT = new \DateTime();
     $oDT->setDate($toDate[2], $toDate[1], $toDate[0]);
-    $oDT->setTime(23,59,59,0);
+    $oDT->setTime(23,59,59);
     $arrayReturn['properties']['stop'] = $oDT->format(DATE_ISO8601);
 
     // Compétition : Niveau
@@ -116,13 +118,36 @@ function crawlCompetition($idCompetition)
         }, $competitionLocation);
         if (strpos($competitionLocation[1], '/') === false) {
             // Hors France
-            $apiGoogle = 'https://nominatim.openstreetmap.org/search?format=json&q='.urlencode($matches[1]);
-            $data = file_get_contents($apiGoogle);
+            $hCurl = curl_init();
+            curl_setopt_array($hCurl, array(
+                CURLOPT_URL => 'https://nominatim.openstreetmap.org/search?format=json&q='.urlencode($matches[1]),
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'GET',
+                CURLOPT_REFERER => 'https://www.google.fr',
+                CURLOPT_HTTPHEADER => array(
+                    'Cache-Control: no-cache'
+                ),
+                CURLOPT_SSL_VERIFYHOST => 0,
+                CURLOPT_SSL_VERIFYPEER => 0,
+            ));
+            $data = curl_exec($hCurl);
+            $hCurlErr = curl_error($hCurl);
+            curl_close($hCurl);
+
+            if ($hCurlErr) {
+                echo "cURL Error #:" . $hCurlErr;
+                die();
+            }
             $data = json_decode($data, true);
             if (empty($data)) {
-//                var_dump(__LINE__);
-//                var_dump($data);
-//                die();
+                if (DEBUG) {
+                    var_dump(__LINE__);
+                    var_dump($data);
+                    die();
+                }
                 return null;
             }
             $data = reset($data);
@@ -133,22 +158,53 @@ function crawlCompetition($idCompetition)
             $arrayReturn['properties']['where:name'] = $matches[1];
         } else {
             // France
-            $dptCode = explode('/', $competitionLocation[1]);
-            $dptCode = substr(trim($dptCode[1]), -2);
+            if ($competitionLocation[0] == 'A determiner') {
+                return null;
+            }
+
+            preg_match('#<tr style="vertical-align:top"><td style="font-weight:bolder;text-align:right;width:9%;white-space:nowrap">Code Postal</td><td style="font-weight:bolder;text-align:center;width:1%">:</td><td style="font-weight:normal;text-align:left;width:90%">([0-9AB]+)</td></tr>#', $contents, $matches);
+            $dptCode = $dptCode1 = $dptCode2 = null;
+            if (!empty($matches[1])) {
+                $dptCode1 = $matches[1];
+                $dptCode1 = substr($dptCode1, 0, 2);
+            }
+            $dptCode2 = explode('/', $competitionLocation[1]);
+            $dptCode2 = trim($dptCode2[1]);
+            $dptCode2 = strval(intval($dptCode2));
+            if (strlen($dptCode2) < 2) {
+                $dptCode2 = str_pad($dptCode2, 2, '0', STR_PAD_LEFT);
+            }
+
             // API
-            $apiBAN = 'https://api-adresse.data.gouv.fr/search/?type=municipality&q='.urlencode($competitionLocation[0]);
-            $data = file_get_contents($apiBAN);
-            $data = json_decode($data, true);
-            $featureFound = null;
-            foreach ($data['features'] as $feature) {
-                if (substr($feature['properties']['id'], 0, 2) == $dptCode) {
-                    $featureFound = $feature;
+            foreach (array('municipality', 'locality', 'street') as $type) {
+                $apiBAN = 'https://api-adresse.data.gouv.fr/search/?type='.$type.'&q='.urlencode($competitionLocation[0]);
+                $data = file_get_contents($apiBAN);
+                $data = json_decode($data, true);
+                $featureFound = null;
+                foreach ($data['features'] as $feature) {
+                    if (!empty($dptCode1) && strpos($feature['properties']['postcode'], $dptCode1) === 0) {
+                        $featureFound = $feature;
+                        $dptCode = $dptCode1;
+                        break;
+                    }
+                    if (!empty($dptCode2) && strpos($feature['properties']['postcode'], $dptCode2) === 0) {
+                        $featureFound = $feature;
+                        $dptCode = $dptCode2;
+                        break;
+                    }
+                }
+                if (is_array($featureFound)) {
+                    break;
                 }
             }
             if (is_null($featureFound)) {
-//                var_dump(__LINE__);
-//                var_dump($data);
-//                die();
+                if (DEBUG) {
+                    var_dump(__LINE__);
+                    var_dump($dptCode1);
+                    var_dump($dptCode2);
+                    var_dump($data);
+                    die();
+                }
                 return null;
             }
             $arrayReturn['geometry'] = $featureFound['geometry'];
@@ -160,19 +216,50 @@ function crawlCompetition($idCompetition)
     return $arrayReturn;
 }
 
-$arrayIdCompetition = crawlList($fromDate, $toDate);
-foreach ($arrayIdCompetition as $id) {
-    $data = crawlCompetition($id);
-    if (is_array($data)) {
-        $data_string = json_encode($data);
+/**
+ * @return SQLite3
+ */
+function initDatabase()
+{
+    $oSQLite = new SQLite3(DB_FILE);
+    $oSQLite->query('CREATE TABLE IF NOT EXISTS oedb_competition(oedb_id TEXT, ffathle_competition_id TEXT)');
+    return $oSQLite;
+}
 
-        $ch = curl_init();
-        curl_setopt($ch,CURLOPT_URL, API_URL.'/event');
-        curl_setopt($ch,CURLOPT_POST, count($data));
-        curl_setopt($ch,CURLOPT_POSTFIELDS, $data_string);
-        $result = curl_exec($ch);
-        curl_close($ch);
-//        var_dump($data);
-//        var_dump($result);
+
+$oDb = initDatabase();
+$arrayIdCompetition = crawlList($fromDate, $toDate);
+var_dump($arrayIdCompetition);
+foreach ($arrayIdCompetition as $id) {
+    $result = $oDb->query('SELECT * FROM oedb_competition WHERE ffathle_competition_id = "'.$id.'";');
+    $result = $result->fetchArray(SQLITE3_ASSOC);
+    if ($result !== false) {
+        continue;
+    }
+
+    $data = crawlCompetition($id);
+    if (!is_array($data)) {
+        continue;
+    }
+    $data_string = json_encode($data);
+
+    $hCurl = curl_init();
+    curl_setopt_array($hCurl, array(
+        CURLOPT_URL => API_URL.'/event',
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => count($data),
+        CURLOPT_POSTFIELDS => $data_string,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+    ));
+    $result = curl_exec($hCurl);
+    curl_close($hCurl);
+    $result = json_decode($result, true);
+    if (!empty($result) && is_array($result) && isset($result['id'])) {
+        $oDb->query('INSERT INTO oedb_competition VALUES ("'.$result['id'].'","'.$id.'");');
+    }
+    if (DEBUG) {
+        var_dump($data);
+        var_dump($result);
+//        die();
     }
 }
