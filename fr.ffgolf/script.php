@@ -1,7 +1,7 @@
 <?php
 
 define('API_URL', 'http://api.openeventdatabase.org');
-define('DEBUG', true);
+define('DEBUG', false);
 
 
 /**
@@ -103,6 +103,7 @@ function crawlGolf($properties)
 }
 
 $arrayList = crawlList();
+$numAdded = $numEverExists = 0;
 foreach ($arrayList as $propsGolf) {
     $data = crawlGolf($propsGolf);
     if (!is_array($data)) {
@@ -122,9 +123,11 @@ foreach ($arrayList as $propsGolf) {
     curl_close($hCurl);
     $result = json_decode($result, true);
     if (isset($result['id'])) {
+        $numAdded++;
         echo 'The competition has been added : '.API_URL.'/event/'.$result['id']. ' ('.$propsGolf['competition'] . ' - '.$propsGolf['libelle'].' à '.$propsGolf['ville'].')'.PHP_EOL;
     }
     if (isset($result['duplicate'])) {
+        $numEverExists++;
         echo 'The competition ever exists : '.API_URL.'/event/'.$result['duplicate']. ' ('.$propsGolf['competition'] . ' - '.$propsGolf['libelle'].' à '.$propsGolf['ville'].')'.PHP_EOL;
     }
     if (DEBUG) {
@@ -132,3 +135,4 @@ foreach ($arrayList as $propsGolf) {
         var_dump($result);
     }
 }
+echo PHP_EOL. 'Ajouts : '.$numAdded.' - Duplications : '.$numEverExists.PHP_EOL;
