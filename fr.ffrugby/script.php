@@ -2,7 +2,7 @@
 
 define('API_URL', 'http://api.openeventdatabase.org');
 define('DB_FILE', 'oedb_fr_ffrugby.sqlite');
-define('DEBUG', true);
+define('DEBUG', false);
 
 
 /**
