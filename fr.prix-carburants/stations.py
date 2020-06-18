@@ -11,6 +11,7 @@ import requests
 import sys
 import json
 import sqlite3
+import re
 
 # création base sqlite pour infos stations
 conn = sqlite3.connect('stations.db')
@@ -22,39 +23,46 @@ html = session.get('https://www.prix-carburants.gouv.fr/').text
 html_tree = BeautifulSoup(html,'lxml').find(id="recherche_recherchertype__token")
 token=html_tree['value']
 
-# préparation de la liste des départements...
-depts = ['2A','2B']
-for dep in range(1, 19):
+# préparation de la liste des départements, dans l'ordre numérique...
+depts = ['01']
+for dep in range(2, 20):
     d = '0'+str(dep)
     depts.append(d[-2:])
-for dep in range(21, 95):
+depts.extend(['2A', '2B'])
+for dep in range(21, 96):
     depts.append(str(dep))
+
+# Préparation du fichier JSON
+print('[')
 
 for d in depts:
     # exécution de la recherche
     html = session.post('https://www.prix-carburants.gouv.fr/',
         {'_recherche_recherchertype[localisation]':d,
-        '_recherche_recherchertype[_token]':token,
-        '_recherche_recherchertype[choix_carbu]':'1'}).text
+        '_recherche_recherchertype[_token]':token}).text
     page=1
     while True:
         # réception des résultats (paginés)
         html = session.get('https://www.prix-carburants.gouv.fr/recherche/?page=%s&limit=100' % page).text
         html_tree = BeautifulSoup(html,'lxml')
         try:
-            pages = len(html_tree.find(id='page').find_all('option'))
+            pages = len(html_tree.find_all(class_=re.compile('^paginationPage')))
         except:
             pages=1
 
         for station in html_tree.find_all(class_='data'):
-            td = station.find_all(class_='pointer')
-            st = dict(id=station['id'], commune=td[1].string, nom=td[2].string, marque=td[3].string)
-            print(json.dumps(st,sort_keys=True))
-            conn.execute("INSERT INTO stations VALUES (?,?,?) ON CONFLICT REPLACE", (station['id'], td[2].string, td[3].string))
+            dv = station.find(class_='pdv-description')
+            td = dv.find_all(re.compile('span'))
+            NomMarque = dv.find('strong').string.split(' | ')
+            st = dict(id=station['id'], nom=NomMarque[0], marque=NomMarque[1])
+            print(json.dumps(st,sort_keys=True, separators=(',', ':'))+',')
+            conn.execute("INSERT INTO stations VALUES (?,?,?) ON CONFLICT REPLACE", (station['id'], NomMarque[0], NomMarque[1]))
 
         if page==pages:
             break
         else:
             page = page + 1
 
+# Fermeture des fichiers
+print('{}]')
 conn.commit()
