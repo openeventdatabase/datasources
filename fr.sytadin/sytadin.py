@@ -7,7 +7,7 @@ import requests
 import sys
 import json
 import re
-from pyproj import Proj, transform
+from pyproj import Transformer
 import sqlite3
 
 # adresse de l'API
@@ -26,8 +26,7 @@ else:
   e_when=sys.argv[2]
 
 # projections utilisées pour transformation en WGS84
-s_srs = Proj(init='EPSG:27572')
-t_srs = Proj(init='EPSG:4326')
+transformer = Transformer.from_crs("EPSG:27572", "EPSG:4326")
 
 with open(sys.argv[1]) as json_file:
   try:
@@ -63,8 +62,9 @@ with open(sys.argv[1]) as json_file:
 
       # reprojection en WGS84
       x,y = e['geometry']['coordinates']
-      lon,lat = transform(s_srs,t_srs,x,y)
-      geometry=dict(type = 'Point', coordinates = [round(lon,6),round(lat,6)])
+      lon, lat = transformer.transform(x, y)
+      geometry = dict(type='Point',
+                      coordinates=[round(lat, 6), round(lon, 6)])
 
       # a-t-on un évènement en cours ?
       db.execute('SELECT * FROM sytadin_events WHERE start <= ? AND what = ? AND geom = ? AND label = ?',(e_when, e_what, json.dumps(geometry,sort_keys=True), e['properties']['info'].replace('\n','')))
