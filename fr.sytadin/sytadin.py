@@ -1,7 +1,7 @@
 # Ecrit par Christian Quest le 4/6/2016
 #
 # ce code est sous licence WTFPL
-# dernière version disponible sur https://github.com/openeventdatabase/datasources
+# voir https://github.com/openeventdatabase/datasources
 
 import requests
 import sys
@@ -107,6 +107,7 @@ with open(sys.argv[1]) as json_file:
                     e['properties']['info'].replace('\n', ''), e_when))
 
     # on supprime les événements qui n'ont plus court
+    print('CLEANUP')
     db.execute("DELETE FROM sytadin_events WHERE stop < ?", (e_when,))
     sql.commit()
 
@@ -115,4 +116,3 @@ with open(sys.argv[1]) as json_file:
 
 db.execute("VACUUM")
 db.close()
-
