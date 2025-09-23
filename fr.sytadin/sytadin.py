@@ -16,7 +16,9 @@ api = 'http://api.openeventdatabase.org'
 # base sqlite pour suivre l'évolution des événements d'un run au suivant
 sql = sqlite3.connect('sytadin.db')
 db = sql.cursor()
-db.execute('CREATE TABLE IF NOT EXISTS sytadin_events (id text, what text, start text, geom text, label text, stop text)')
+db.execute('''CREATE TABLE IF NOT EXISTS sytadin_events (id text, what text,
+           start text, geom text, label text, stop text)''')
+db.execute('''DELETE FROM sytadin_events WHERE id = "None"''')
 
 
 if len(sys.argv) <= 2:
@@ -106,12 +108,11 @@ with open(sys.argv[1]) as json_file:
 
     # on supprime les événements qui n'ont plus court
     db.execute("DELETE FROM sytadin_events WHERE stop < ?", (e_when,))
-    db.execute("VACUUM")
-
     sql.commit()
 
   except:
     pass
 
+db.execute("VACUUM")
 db.close()
 
