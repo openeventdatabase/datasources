@@ -1,7 +1,7 @@
 import requests
 import json
 import time
-from pyproj import Proj, transform
+from pyproj import Transformer
 
 """
 Scrapping des données de circulation sur bisonfute.fr
@@ -18,7 +18,7 @@ def charge(x,y,z):
       for e in datajson['features']:
         if e['properties']['urlImage'][7]=='1':
           deeper = True
-        lon,lat = transform(s_srs,t_srs,e['geometry']['coordinates'][0],e['geometry']['coordinates'][1])
+        lon,lat = lamb2wgs.transform(e['geometry']['coordinates'][0],e['geometry']['coordinates'][1])
         geometry=dict(type = 'Point', coordinates = [round(lon,6),round(lat,6)])
         quoi = e['properties']['urlImage'][11:-4]
         if quoi == 'travaux':
@@ -44,8 +44,7 @@ def charge(x,y,z):
     return nb
 
 # projections utilisées pour transformation en WGS84
-s_srs = Proj(init='EPSG:2154')
-t_srs = Proj(init='EPSG:4326')
+lamb2wgs = Transformer.from_crs('EPSG:2154','EPSG:4326')
 
 # récupération date courante
 datereq = requests.get(url='http://www.bison-fute.gouv.fr/data/iteration/date.json')
