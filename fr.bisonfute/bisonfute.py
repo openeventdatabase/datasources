@@ -33,7 +33,7 @@ def charge(x,y,z):
             deeper = True
         else:
             for d in detail:
-              print(json.dumps({"geometry":geometry, "properties":{"data":d}}))
+              print(json.dumps({"geometry":geometry, "properties":{"data":d}},ensure_ascii=False))
 
       if deeper:
         charge(2*x, 2*y, z+1)
