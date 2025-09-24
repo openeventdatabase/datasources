@@ -27,7 +27,7 @@ def charge(x,y,z):
           quoi = 'jam'
         e_what = 'traffic.'+quoi
 
-        detailreq = requests.get('http://www.bison-fute.gouv.fr/' + e['properties']['urlcpc'])
+        detailreq = requests.get('https://www.bison-fute.gouv.fr/' + e['properties']['urlcpc'])
         detail = json.loads(detailreq.text)
         if len(detail)>1:
             deeper = True
@@ -47,10 +47,10 @@ def charge(x,y,z):
 lamb2wgs = Transformer.from_crs('EPSG:2154','EPSG:4326')
 
 # récupération date courante
-datereq = requests.get(url='http://www.bison-fute.gouv.fr/data/iteration/date.json')
+datereq = requests.get(url='https://www.bison-fute.gouv.fr/data/iteration/date.json')
 datejson = json.loads(datereq.text)
 dernier = time.strftime('%Y%m%d-%H%M%S', time.localtime(datejson[0]/1000))
-dataurl = "http://www4.bison-fute.gouv.fr/data/data-%s/" % dernier
+dataurl = "https://www4.bison-fute.gouv.fr/data/data-%s/" % dernier
 for x0 in range(0,5):
   for y0 in range (0,5):
     charge(x0,y0,1)
